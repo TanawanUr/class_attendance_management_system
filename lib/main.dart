@@ -10,7 +10,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Student App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        fontFamily: 'Kanit',
+        primarySwatch: Colors.blue
+      ),
       initialRoute: '/',
       routes: {
         '/': (context) => LoginScreen(),
