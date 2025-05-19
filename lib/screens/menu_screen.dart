@@ -5,103 +5,126 @@ class MenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> gridItems = [
-      {'icon': Icons.login, 'label': 'เช็คชื่อนักศึกษา'},
-      {'icon': Icons.person_add, 'label': 'ประวัติการเช็คชื่อ'},
-      {'icon': Icons.settings, 'label': 'การบ้าน'},
-      {'icon': Icons.info, 'label': 'สถานะการขาดเรียน'},
-      {'icon': Icons.lock, 'label': 'ค่าเทอม'},
-      // {'icon': Icons.phone, 'label': 'ติดต่อเรา'},
-      // {'icon': Icons.help, 'label': 'ช่วยเหลือ'},
-      // {'icon': Icons.map, 'label': 'แผนที่'},
-      // {'icon': Icons.star, 'label': 'ให้คะแนน'},
-      // {'icon': Icons.logout, 'label': 'ออกจากระบบ'},
+    final gridItems = [
+      {'label': 'เช็คชื่อนักศึกษา', 'image': 'assets/icons/check_student.png', 'route': '/select-subject-class'},
+      {'label': 'ประวัติการเช็คชื่อ', 'image': 'assets/icons/history.png', 'route': '/history'},
+      {'label': 'การบ้าน', 'image': 'assets/icons/homework.png', 'route': '/homework'},
+      {'label': 'ค่าเทอม', 'image': 'assets/icons/tuition.png', 'route': '/tuition'},
     ];
+
     return Scaffold(
-        body: SingleChildScrollView(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        backgroundColor: Color(0xffF3F3F3),
+        body: Column(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.rectangle,
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.elliptical(200, 100),
-              ),
-              color: Color(0xff1E2383),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(top: 90, bottom: 50),
-              child: Center(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: 20,
-                    ),
-                    Text(
-                      'เมนู',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5),
-                    ),
-                  ],
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.elliptical(200, 100),
+                  ),
+                  boxShadow: [
+                          BoxShadow(
+                            offset: Offset(0, 2),
+                            color: Colors.black38,
+                            blurRadius: 8,
+                          ),
+                        ],
+                  color: Color(0xff00154C),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 50),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.all(16),
-            itemCount: gridItems.length,
-            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 200,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 20,
-              childAspectRatio: 1,
-            ),
-            itemBuilder: (context, index) {
-              final item = gridItems[index];
-              return Column(
-                children: [
-                  Container(
-                    width: 120,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.shade500,
-                          offset: Offset(2, 2),
-                          blurRadius: 4,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 90, bottom: 50),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Text(
+                          'เมนู',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 56,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5),
                         ),
                       ],
                     ),
-                    child: IconButton(
-                      icon: Icon(item['icon'], size: 40, color: Colors.black87),
-                      onPressed: () {
-                        // action for each button
-                        print('${item['label']} tapped');
-                      },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.all(16),
+                itemCount: gridItems.length,
+                gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 200,
+                  mainAxisSpacing: 38,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.9,
+                ),
+                itemBuilder: (context, index) {
+                  final item = gridItems[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, item['route']!);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            flex: 6,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Image.asset(
+                                item['image'] ??
+                                    '', // use asset path like 'assets/icons/check_icon.png'
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Color(0xff00154C),
+                                borderRadius: BorderRadius.vertical(
+                                  bottom: Radius.circular(16),
+                                ),
+                              ),
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Center(
+                                child: Text(
+                                  item['label'] ?? '',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    item['label'],
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    ));
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          )
+    );  
   }
 }
