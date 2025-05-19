@@ -29,7 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: SingleChildScrollView(
+      backgroundColor: Color(0xffF3F3F3),
+      body: SingleChildScrollView(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -37,24 +38,21 @@ class _LoginScreenState extends State<LoginScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.rectangle,
               borderRadius: BorderRadius.vertical(
-                bottom: Radius.elliptical(250, 120),
+                bottom: Radius.elliptical(200, 120),
               ),
-              color: Color(0xff1E2383),
+              color: Color(0xff00154C),
             ),
             child: Padding(
-              padding: EdgeInsets.only(top: 180, bottom: 60),
+              padding: EdgeInsets.only(top: 160, bottom: 80),
               child: Center(
                 child: Column(
                   children: [
-                    SizedBox(
-                      height: 20,
-                    ),
                     Text(
                       'เข้าสู่ระบบ',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 36,
+                          fontSize: 60,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -0.5),
                     ),
@@ -71,12 +69,12 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 Text(
                   'Username',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 18),
                 ),
                 SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: Color.fromARGB(255, 202, 202, 202),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
@@ -97,12 +95,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 24),
                 Text(
                   'Password',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(fontSize: 18),
                 ),
                 SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: Color.fromARGB(255, 202, 202, 202),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
@@ -131,20 +129,20 @@ class _LoginScreenState extends State<LoginScreen> {
               : ElevatedButton(
                   onPressed: _login,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[300],
+                    backgroundColor: Color(0xffF9CA10),
                     elevation: 2,
                     shadowColor: Colors.black38,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30), // slightly more rounded
                     ),
-                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14), // a bit larger
+                    padding: EdgeInsets.symmetric(horizontal: 36, vertical: 12), // a bit larger
                   ),
                   child: Text(
                     'ตกลง',
                     style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700
                     ),
                   ),
                 ),
