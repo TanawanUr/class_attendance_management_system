@@ -1,5 +1,7 @@
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:class_attendance_management_system/services/tuition_service.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TuitionScreen extends StatefulWidget {
   const TuitionScreen({super.key});
@@ -11,65 +13,46 @@ class TuitionScreen extends StatefulWidget {
 class _TuitionScreenState extends State<TuitionScreen> {
   String selectedStatus = 'ทั้งหมด';
 
-  List<String> status = ['ทั้งหมด','จ่ายแล้ว', 'ยังไม่จ่าย'];
+  List<String> status = ['ทั้งหมด', 'จ่ายแล้ว', 'ยังไม่จ่าย'];
 
   final Map<String, Color> statusColors = {
     'จ่ายแล้ว': Color(0xff57BC40),
     'ยังไม่จ่าย': Color(0xffE94C30),
   };
 
-  final List<Map<String, String>> students = [
-    {
-      'id': '164404140076',
-      'name': 'นายธนบดี สุธามา',
-      'status': 'จ่ายแล้ว',
-    },
-    {
-      'id': '164404140077',
-      'name': 'นางสาวสมฤดี ใจดี',
-      'status': 'จ่ายแล้ว',
-    },
-    {
-      'id': '164404140078',
-      'name': 'นายอาทิตย์ สว่างจิต',
-      'status': 'จ่ายแล้ว',
-    },
-    {
-      'id': '164404140079',
-      'name': 'นางสาวอรอุมา สว่างจิต',
-      'status': 'ยังไม่จ่าย',
-    },
-    {
-      'id': '164404140080',
-      'name': 'นายพงศกร สุขใจ',
-      'status': 'จ่ายแล้ว',
-    },
-    {
-      'id': '164404140081',
-      'name': 'นางสาวสุภาภรณ์ สุขใจ',
-      'status': 'ยังไม่จ่าย',
-    },
-    {
-      'id': '164404140082',
-      'name': 'นายอาทิตย์ สุขใจ',
-      'status': 'จ่ายแล้ว',
-    },
-    {
-      'id': '164404140083',
-      'name': 'นางสาวอรอุมา สุขใจ',
-      'status': 'ยังไม่จ่าย',
-    },
-    {
-      'id': '164404140084',
-      'name': 'นายพงศกร สุขใจ',
-      'status': 'ยังไม่จ่าย',
-    },
-    {
-      'id': '164404140085',
-      'name': 'นางสาวสุภาภรณ์ สุขใจ',
-      'status': 'ยังไม่จ่าย',
-    },
-  ];
+  List<Map<String, String>> students = [];
+
+  Future<String> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token') ?? '';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTuitionData();
+  }
+
+  Future<void> fetchTuitionData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      print('Token: $token');
+
+      if (token == null) throw Exception('No token found');
+
+      final data = await TuitionService.fetchTuitionData(
+        token: token,
+        selectedStatus: selectedStatus,
+      );
+      setState(() {
+        students = data;
+      });
+    } catch (e) {
+      print('Error loading tuition data: $e');
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -154,97 +137,105 @@ class _TuitionScreenState extends State<TuitionScreen> {
                                         setState(() {
                                           selectedStatus = value!;
                                         });
+                                        fetchTuitionData();
                                       },
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          ]
-                        )
-                      ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(15),
-                        child: Column(
-                          children: [
-                            Container(
-                              color: Color(0xFF001B57),
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 8),
-                              child: Row(
-                                children: [
-                                  _tableHeader('รหัสนักศึกษา', flex: 2),
-                                  _tableHeader('ชื่อ–นามสกุล', flex: 3),
-                                  _tableHeader('สถานะ', flex: 1),
-                                ],
-                              ),
+                          ])),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(15),
+                      child: Column(
+                        children: [
+                          Container(
+                            color: Color(0xFF001B57),
+                            padding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 8),
+                            child: Row(
+                              children: [
+                                _tableHeader('รหัสนักศึกษา', flex: 2),
+                                _tableHeader('ชื่อ–นามสกุล', flex: 3),
+                                _tableHeader('สถานะ', flex: 1),
+                              ],
                             ),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.only(bottom: 35),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: students.map((record) {
-                                    final id = record['id']!;
-                                    final name = record['name']!;
-                                    final status = record['status'] ?? 'ไม่ทราบ';
-                                
-                                    return Container(
-                                      padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          top: BorderSide(color: Colors.grey.shade300),
-                                        ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.only(bottom: 35),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: students.map((record) {
+                                  final id = record['id']!;
+                                  final name = record['name']!;
+                                  final status = record['status'] ?? 'ไม่ทราบ';
+
+                                  return Container(
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: 6, horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        top: BorderSide(
+                                            color: Colors.grey.shade300),
                                       ),
-                                      child: Row(
-                                        children: [
-                                          _tableCell(id, flex: 2),
-                                          _tableCell(name, flex: 3),
-                                          Expanded(
-                                            flex: 1,
-                                            child: SizedBox(
-                                              height: 30,
-                                              child: ElevatedButton(
-                                                onPressed: (){}, 
-                                                style: ElevatedButton.styleFrom(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  backgroundColor: statusColors[status] ?? Colors.grey.shade300,
-                                                  foregroundColor: Colors.white,
-                                                  elevation: 0,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(10),
-                                                  ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        _tableCell(id, flex: 2),
+                                        _tableCell(name, flex: 3),
+                                        Expanded(
+                                          flex: 1,
+                                          child: SizedBox(
+                                            height: 30,
+                                            child: ElevatedButton(
+                                              onPressed: () {},
+                                              style: ElevatedButton.styleFrom(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 8, vertical: 4),
+                                                backgroundColor:
+                                                    statusColors[status] ??
+                                                        Colors.grey.shade300,
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
                                                 ),
-                                                child: AutoSizeText(
-                                                  status,
-                                                  maxLines: 1,
-                                                  minFontSize: 12,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                                                ),
+                                              ),
+                                              child: AutoSizeText(
+                                                status,
+                                                maxLines: 1,
+                                                minFontSize: 12,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                    fontSize: 14,
+                                                    fontWeight:
+                                                        FontWeight.w600),
                                               ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
                               ),
-                            )
-                          ],
-                        ),
+                            ),
+                          )
+                        ],
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
@@ -309,55 +300,52 @@ Widget _tableCell(String text, {int flex = 1, bool textAlignCenter = false}) {
   );
 }
 
+Widget buildSummaryItem(String label, int count) {
+  Color backgroundColor;
 
-  Widget buildSummaryItem(String label, int count) {
-    Color backgroundColor;
-
-    switch (label) {
-      case 'มาเรียน':
-        backgroundColor = Color(0xff57BC40);
-        break;
-      case 'สาย':
-        backgroundColor = Color(0xffEAA31E);
-        break;
-      case 'ขาด':
-        backgroundColor = Color(0xffE94C30);
-        break;
-      case 'ลากิจ':
-        backgroundColor = Color(0xff33A4C3);
-        break;
-      case 'ลาป่วย':
-        backgroundColor = Color(0xffAE62E2);
-        break;
-      default:
-        backgroundColor = Color(0xff00154C);
-    }
-
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 40,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Center(
-            child: AutoSizeText(
-              count.toString(),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 1,
-            ),
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(label,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-      ],
-    );
+  switch (label) {
+    case 'มาเรียน':
+      backgroundColor = Color(0xff57BC40);
+      break;
+    case 'สาย':
+      backgroundColor = Color(0xffEAA31E);
+      break;
+    case 'ขาด':
+      backgroundColor = Color(0xffE94C30);
+      break;
+    case 'ลากิจ':
+      backgroundColor = Color(0xff33A4C3);
+      break;
+    case 'ลาป่วย':
+      backgroundColor = Color(0xffAE62E2);
+      break;
+    default:
+      backgroundColor = Color(0xff00154C);
   }
 
+  return Column(
+    children: [
+      Container(
+        width: 60,
+        height: 40,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: AutoSizeText(
+            count.toString(),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+          ),
+        ),
+      ),
+      SizedBox(height: 4),
+      Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+    ],
+  );
+}
