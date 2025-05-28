@@ -1,12 +1,15 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:class_attendance_management_system/screens/assignment_detail_screen.dart';
+import 'package:class_attendance_management_system/services/homework_service.dart';
 import 'package:flutter/material.dart';
 
 class HomeworkDetailScreen extends StatefulWidget {
+  final String classId;
   final String subjectName;
 
   const HomeworkDetailScreen({
     Key? key,
+    required this.classId,
     required this.subjectName,
   }) : super(key: key);
 
@@ -15,14 +18,33 @@ class HomeworkDetailScreen extends StatefulWidget {
 }
 
 class _HomeworkDetailScreenState extends State<HomeworkDetailScreen> {
-  final List<Map<String, String>> assignment = [
-    {'assignmentTitle': 'สร้างโปรแกรมคิดเลข', 'dueDate': '2023-10-01'},
-    {'assignmentTitle': 'สร้างโปรแกรมคำนวณ BMI', 'dueDate': '2023-10-15'},
-    {
-      'assignmentTitle': 'สร้างโปรแกรมจัดการข้อมูลนักเรียน',
-      'dueDate': '2023-10-30'
+  List<Map<String, dynamic>> assignment = [];
+  bool isLoading = true;
+
+  void loadHomework() {
+    fetchHomeworkList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchHomeworkList();
+  }
+
+  Future<void> fetchHomeworkList() async {
+    try {
+      final list = await HomeworkService.fetchHomeworkList(widget.classId);
+      setState(() {
+        assignment = list;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      print('Error fetching homework: $e');
     }
-  ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +52,11 @@ class _HomeworkDetailScreenState extends State<HomeworkDetailScreen> {
       backgroundColor: Color(0xffF3F3F3),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          showCreateDialog(context);
+          showCreateDialog(
+            context: context,
+            classId: widget.classId,
+            onCreated: loadHomework,
+          );
         },
         backgroundColor: Color(0xffF9CA10),
         child: Icon(Icons.add, color: Colors.white),
@@ -141,18 +167,22 @@ class _HomeworkDetailScreenState extends State<HomeworkDetailScreen> {
                           final dueDate = task['dueDate']!;
 
                           return GestureDetector(
-                            onTap: () {
-                              // Navigate to the detail screen
-                              Navigator.push(
+                            onTap: () async {
+                              final shouldRefresh = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => AssignmentDetailScreen(
+                                    homeworkId: task['homeworkId'],
                                     subjectName: widget.subjectName,
                                     title: title,
                                     dueDate: dueDate,
                                   ),
                                 ),
                               );
+
+                              if (shouldRefresh == true) {
+                                fetchHomeworkList();
+                              }
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -239,104 +269,160 @@ Widget _tableCell(String text, {int flex = 1, bool textAlignCenter = false}) {
   );
 }
 
-void showCreateDialog(BuildContext context) {
+void showCreateDialog({
+  required BuildContext context,
+  required String classId,
+  required Function() onCreated,
+}) {
+  final TextEditingController titleController = TextEditingController();
+  DateTime? selectedDate;
+
   showDialog(
     context: context,
     builder: (context) {
-      return Dialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Center(
-                    child: Text(
-                      'สร้างใหม่',
-                      style:
-                          TextStyle(fontSize: 32, fontWeight: FontWeight.w700),
+      return StatefulBuilder(builder: (context, setState) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Center(
+                      child: Text('สร้างใหม่',
+                          style: TextStyle(
+                              fontSize: 32, fontWeight: FontWeight.w700)),
                     ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Icon(Icons.close, color: Colors.red),
+                    Positioned(
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Icon(Icons.close, color: Colors.red),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'หัวข้อ',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'กรอกหัวข้อการบ้าน',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'กำหนดส่ง - หมดเขต',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                readOnly: true,
-                onTap: () async {
-                  DateTime? pickedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  // Handle picked date if needed
-                },
-                decoration: InputDecoration(
-                  hintText: 'เลือกวันที่',
-                  suffixIcon: Icon(Icons.calendar_today),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 20),
+                Text('หัวข้อ',
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    hintText: 'กรอกหัวข้อการบ้าน',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12),
                   ),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
                 ),
-              ),
-              const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xffF4C610),
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(
+                const SizedBox(height: 20),
+                Text('กำหนดส่ง - หมดเขต',
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() => selectedDate = picked);
+                    }
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                  child: Text(
-                    'สร้าง',
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selectedDate != null
+                                ? '${selectedDate!.toLocal()}'.split(' ')[0]
+                                : 'เลือกวันที่',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        Icon(Icons.calendar_today, size: 20),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 25),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final title = titleController.text.trim();
+                      final dueDate =
+                          selectedDate?.toIso8601String().split('T')[0];
+
+                      if (title.isEmpty || dueDate == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('กรุณากรอกข้อมูลให้ครบ'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final success = await HomeworkService().createHomework(
+                        classId: classId,
+                        title: title,
+                        dueDate: dueDate,
+                      );
+
+                      if (success) {
+                        Navigator.of(context).pop(); // ปิด dialog ก่อน
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('สร้างการบ้านสำเร็จ'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+
+                        onCreated();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('สร้างการบ้านไม่สำเร็จ'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xffF4C610),
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text('สร้าง',
+                        style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
+        );
+      });
     },
   );
 }
