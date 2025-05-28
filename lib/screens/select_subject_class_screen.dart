@@ -1,5 +1,7 @@
 import 'package:class_attendance_management_system/screens/subject_detail_screen.dart';
+import 'package:class_attendance_management_system/services/subject_service.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SelectSubjectClassScreen extends StatefulWidget {
   const SelectSubjectClassScreen({super.key});
@@ -10,36 +12,35 @@ class SelectSubjectClassScreen extends StatefulWidget {
 }
 
 class _SelectSubjectClassScreenState extends State<SelectSubjectClassScreen> {
-  final List<Map<String, dynamic>> yearData = [
-    {
-      "year": "ปีที่ 1",
-      "subjects": [
-        "รหัสวิชา วงจรไฟฟ้า กลุ่มที่ 1",
-        "รหัสวิชา วงจรไฟฟ้า กลุ่มที่ 2"
-      ],
-    },
-    {
-      "year": "ปีที่ 2",
-      "subjects": [
-        "รหัสวิชา วงจรไฟฟ้าขั้นสูง กลุ่มที่ 5",
-        "รหัสวิชา วงจรไฟฟ้าขั้นสูง กลุ่มที่ 6"
-      ],
-    },
-    {
-      "year": "ปีที่ 3",
-      "subjects": [
-        "รหัสวิชา วงจรไฟฟ้าขั้นสูง กลุ่มที่ 5",
-        "รหัสวิชา วงจรไฟฟ้าขั้นสูง กลุ่มที่ 6"
-      ],
-    },
-    {
-      "year": "ปีที่ 4",
-      "subjects": [
-        "รหัสวิชา วงจรไฟฟ้าขั้นสูง กลุ่มที่ 5",
-        "รหัสวิชา วงจรไฟฟ้าขั้นสูง กลุ่มที่ 6"
-      ],
-    },
-  ];
+  List<Map<String, dynamic>> yearData = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSubjects();
+  }
+
+  Future<void> _fetchSubjects() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      print('Token: $token');
+
+      if (token == null) throw Exception('No token found');
+
+      final data = await SubjectService.getMySubjects(token);
+      setState(() {
+        yearData = List<Map<String, dynamic>>.from(data);
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching subjects: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -98,89 +99,100 @@ class _SelectSubjectClassScreenState extends State<SelectSubjectClassScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: yearData.length,
-              itemBuilder: (context, index) {
-                final year = yearData[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6.0),
-                  child: Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Theme(
-                        data: Theme.of(context)
-                            .copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          tilePadding: EdgeInsets.symmetric(horizontal: 16),
-                          title: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                year['year'],
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Container(
-                                margin: EdgeInsets.only(top: 8),
-                                height: 0.5,
-                                color: Color(0xFFE0E0E0),
-                              ),
-                            ],
+            child: isLoading
+                ? Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: yearData.length,
+                    itemBuilder: (context, index) {
+                      final year = yearData[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                        child: Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          children: [
-                            ...year['subjects'].map<Widget>((subject) {
-                              return Column(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 10.0), // Move text back a bit
-                                    child: ListTile(
-                                      tileColor: Colors.white,
-                                      title: Text(
-                                        subject,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w400,
-                                        ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Theme(
+                              data: Theme.of(context)
+                                  .copyWith(dividerColor: Colors.transparent),
+                              child: ExpansionTile(
+                                tilePadding:
+                                    EdgeInsets.symmetric(horizontal: 16),
+                                title: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      year['year'],
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      dense: true,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => SubjectDetailScreen(subjectName: subject, date: 'จ. 05/11/2568', time: '13:00-17:00',),
-                                          ),
-                                        );
-                                      },
                                     ),
-                                  ),
-                                  Container(
-                                    margin:
-                                        EdgeInsets.symmetric(horizontal: 24),
-                                    height: 0.5,
-                                    color: Color(0xFFE0E0E0),
-                                  ),
+                                    Container(
+                                      margin: EdgeInsets.only(top: 8),
+                                      height: 0.5,
+                                      color: Color(0xFFE0E0E0),
+                                    ),
+                                  ],
+                                ),
+                                children: [
+                                  ...year['subjects'].map<Widget>((subject) {
+                                    String subjectTitle ='${subject['subject_name']} กลุ่มที่ ${subject['group']}';
+                                    String date =subject['date_this_week'] ?? 'ไม่ระบุ';
+                                    String time = subject['time'] ?? 'ไม่ระบุ';
+                                    return Column(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.only(left:10.0),
+                                          child: ListTile(
+                                            tileColor: Colors.white,
+                                            title: Text(
+                                              subjectTitle,
+                                              style: TextStyle(
+                                                fontSize: 17,
+                                                fontWeight: FontWeight.w400,
+                                              ),
+                                            ),
+                                            dense: true,
+                                            onTap: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      SubjectDetailScreen(
+                                                        classId: subject['class_id'],
+                                                        subjectName: subjectTitle,
+                                                        date: date,
+                                                        time: time,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        Container(
+                                          margin: EdgeInsets.symmetric(
+                                              horizontal: 24),
+                                          height: 0.5,
+                                          color: Color(0xFFE0E0E0),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                  SizedBox(height: 12),
                                 ],
-                              );
-                            }).toList(),
-                            SizedBox(height: 12),
-                          ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
