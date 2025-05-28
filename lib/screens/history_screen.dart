@@ -1,5 +1,8 @@
+import 'package:class_attendance_management_system/services/attendance_service.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HistoryScreen extends StatefulWidget {
   final String selectedSubject;
@@ -20,44 +23,15 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   String? selectedSubject;
   String? selectedDate;
-  String? selectedTime;
+  Map<String, dynamic>? selectedTimeOption;
 
-  List<String> subjects = ['คณิตศาสตร์', 'วิทยาศาสตร์', 'ภาษาไทย'];
-  Map<String, List<String>> subjectDates = {
-    'คณิตศาสตร์': ['2025-05-01', '2025-05-08'],
-    'วิทยาศาสตร์': ['2025-05-02'],
-    'ภาษาไทย': ['2025-05-03'],
-  };
-  Map<String, List<String>> dateTimes = {
-    '2025-05-01': ['09:00', '13:00'],
-    '2025-05-08': ['10:00'],
-    '2025-05-02': ['11:00'],
-    '2025-05-03': ['08:30'],
-  };
+  List<String> subjects = [];
+  Map<String, List<String>> subjectDates = {};
+  Map<String, List<Map<String, dynamic>>> dateTimes = {}; // <-- สำคัญ
 
-  Map<String, List<Map<String, dynamic>>> dummyAttendanceRecords = {
-    'คณิตศาสตร์|2025-05-01|09:00': [
-      {'id': '16440414001', 'name': 'สมชาย', 'status': 'มาเรียน'},
-      {'id': '16440414002', 'name': 'สมหญิง', 'status': 'ลาป่วย'},
-      {'id': '16440414003', 'name': 'ดำรง', 'status': 'ขาด'},
-      {'id': '16440414004', 'name': 'อรพรรณ', 'status': 'ลากิจ'},
-      {'id': '16440414005', 'name': 'บรรเจิด', 'status': 'มาเรียน'},
-      {'id': '16440414006', 'name': 'อารีย์', 'status': 'สาย'},
-      {'id': '16440414007', 'name': 'อรทัย', 'status': 'มาเรียน'},
-      {'id': '16440414008', 'name': 'อรพรรณ', 'status': 'ลากิจ'},
-      {'id': '16440414009', 'name': 'บรรเจิด', 'status': 'มาเรียน'},
-      {'id': '16440414010', 'name': 'อารีย์', 'status': 'มาเรียน'},
-    ],
-    'คณิตศาสตร์|2025-05-01|13:00': [
-      {'id': '004', 'name': 'อรพรรณ', 'status': 'มาเรียน'},
-    ],
-    'วิทยาศาสตร์|2025-05-02|11:00': [
-      {'id': '005', 'name': 'บรรเจิด', 'status': 'มาเรียน'},
-    ],
-    'ภาษาไทย|2025-05-03|08:30': [
-      {'id': '006', 'name': 'อารีย์', 'status': 'ขาด'},
-    ],
-  };
+  String? get selectedStartTime => selectedTimeOption?['start_time'];
+  String? get selectedEndTime => selectedTimeOption?['end_time'];
+  String? get selectedClassId => selectedTimeOption?['class_id'];
 
   final Map<String, Color> statusColors = {
     'มาเรียน': Color(0xff57BC40),
@@ -67,26 +41,78 @@ class _HistoryScreenState extends State<HistoryScreen> {
     'ลาป่วย': Color(0xffAE62E2),
   };
 
-  List<Map<String, dynamic>> attendanceData = [];
+  String formatThaiDate(String isoDate) {
+    final date = DateTime.parse(isoDate);
+    final thaiDays = [
+      'อาทิตย์',
+      'จันทร์',
+      'อังคาร',
+      'พุธ',
+      'พฤหัสบดี',
+      'ศุกร์',
+      'เสาร์'
+    ];
+    final buddhistYear = date.year + 543;
+    final dayName = thaiDays[date.weekday % 7];
+    final dateFormatted = DateFormat('dd/MM').format(date);
 
-  void fetchAttendanceData() {
-    String key = '$selectedSubject|$selectedDate|$selectedTime';
-    setState(() {
-      attendanceData = dummyAttendanceRecords[key] ?? [];
-    });
+    return '$dayName  $dateFormatted/$buddhistYear';
   }
+
+  List<Map<String, dynamic>> attendanceData = [];
 
   @override
   void initState() {
     super.initState();
-    selectedSubject = widget.selectedSubject;
-    selectedDate = widget.selectedDate?.toIso8601String().substring(0, 10);
-    selectedTime = widget.selectedTime?.format(context);
-    if (selectedSubject != null &&
+    fetchHistoryOptions();
+  }
+
+  Future<void> fetchAttendanceData() async {
+    if (selectedClassId != null &&
         selectedDate != null &&
-        selectedTime != null) {
-      fetchAttendanceData();
+        selectedStartTime != null &&
+        selectedEndTime != null) {
+      final data = await AttendanceService.fetchAttendanceHistory(
+        classId: selectedClassId!,
+        date: selectedDate!,
+        startTime: selectedStartTime!,
+        endTime: selectedEndTime!,
+      );
+
+      setState(() {
+        attendanceData = data;
+      });
+    } else {
+      print('Missing required fields');
     }
+  }
+
+  Future<void> fetchHistoryOptions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+
+    if (token == null) throw Exception('No token found');
+
+    final result = await AttendanceService.fetchHistoryOptions(token);
+
+    setState(() {
+      subjects = List<String>.from(result['subjects']);
+
+      final Map<String, dynamic> sd = result['subjectDates'];
+      subjectDates =
+          sd.map((key, value) => MapEntry(key, List<String>.from(value)));
+
+      final Map<String, dynamic> dt = result['dateTimes'];
+      dateTimes = dt.map((key, value) {
+        final List<dynamic> timeList = value;
+        return MapEntry(
+            key,
+            timeList
+                .map<Map<String, dynamic>>(
+                    (item) => Map<String, dynamic>.from(item))
+                .toList());
+      });
+    });
   }
 
   Map<String, int> getSummary(List<Map<String, dynamic>> data) {
@@ -194,22 +220,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 padding: EdgeInsets.symmetric(horizontal: 12),
                                 child: DropdownButton<String>(
                                   isExpanded: true,
-                                  dropdownColor: Colors.white, 
+                                  dropdownColor: Colors.white,
                                   value: subjects.contains(selectedSubject)
                                       ? selectedSubject
                                       : null,
-                                  hint: Text('เลือกวิชา'),
+                                  hint: Text('เลือกวิชา',
+                                      style: TextStyle(fontSize: 17)),
                                   items: subjects.map((subject) {
                                     return DropdownMenuItem(
                                       value: subject,
-                                      child: Text(subject),
+                                      child: Text(subject,
+                                          style: TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w500)),
                                     );
                                   }).toList(),
                                   onChanged: (value) {
                                     setState(() {
                                       selectedSubject = value;
                                       selectedDate = null;
-                                      selectedTime = null;
+                                      selectedTimeOption = null;
                                       attendanceData = [];
                                     });
                                   },
@@ -219,91 +249,114 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 12),
-
-                        // Date Dropdown
                         if (selectedSubject != null)
-                          Row(
+                          Column(
                             children: [
-                              Text('วันที่ : ',
-                                  style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600)),
-                              Expanded(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Color(0xffEAEAEA),
-                                    borderRadius: BorderRadius.circular(8),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Text('วันที่ : ',
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600)),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Color(0xffEAEAEA),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 12),
+                                      child: DropdownButton<String>(
+                                        isExpanded: true,
+                                        dropdownColor: Colors.white,
+                                        value: subjectDates[selectedSubject]
+                                                    ?.contains(selectedDate) ==
+                                                true
+                                            ? selectedDate
+                                            : null,
+                                        hint: Text('เลือกวันที่',
+                                            style: TextStyle(fontSize: 17)),
+                                        items: (subjectDates[selectedSubject] ??
+                                                [])
+                                            .map((date) => DropdownMenuItem(
+                                                  value: date,
+                                                  child: Text(
+                                                      formatThaiDate(date),
+                                                      style: TextStyle(
+                                                          fontSize: 17,
+                                                          fontWeight:
+                                                              FontWeight.w500)),
+                                                ))
+                                            .toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedDate = value;
+                                            selectedTimeOption = null;
+                                            attendanceData = [];
+                                          });
+                                        },
+                                      ),
+                                    ),
                                   ),
-                                  padding: EdgeInsets.symmetric(horizontal: 12),
-                                  child: DropdownButton<String>(
-                                    isExpanded: true,
-                                    dropdownColor: Colors.white, 
-                                    value: subjectDates[selectedSubject]
-                                                ?.contains(selectedDate) ==
-                                            true
-                                        ? selectedDate
-                                        : null,
-                                    hint: Text('เลือกวันที่'),
-                                    items: (subjectDates[selectedSubject] ?? [])
-                                        .map((date) => DropdownMenuItem(
-                                              value: date,
-                                              child: Text(date),
-                                            ))
-                                        .toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        selectedDate = value;
-                                        selectedTime = null;
-                                        attendanceData = [];
-                                      });
-                                    },
-                                  ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
 
-                        const SizedBox(height: 12),
-
-                        // Time Dropdown
                         if (selectedDate != null)
-                          Row(
+                          Column(
                             children: [
-                              Text('เวลา : ',
-                                  style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w600)),
-                              Expanded(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Color(0xffEAEAEA),
-                                    borderRadius: BorderRadius.circular(8),
+                              SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Text('เวลา : ',
+                                      style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w600)),
+                                  Expanded(
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Color(0xffEAEAEA),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding:
+                                          EdgeInsets.symmetric(horizontal: 12),
+                                      child:
+                                          DropdownButton<Map<String, dynamic>>(
+                                        isExpanded: true,
+                                        dropdownColor: Colors.white,
+                                        value: selectedTimeOption != null &&
+                                                dateTimes[selectedDate]!
+                                                    .contains(
+                                                        selectedTimeOption)
+                                            ? selectedTimeOption
+                                            : null,
+                                        hint: Text('เลือกเวลา',
+                                            style: TextStyle(fontSize: 17)),
+                                        items: dateTimes[selectedDate]!
+                                            .map((timeMap) => DropdownMenuItem<
+                                                    Map<String, dynamic>>(
+                                                  value: timeMap,
+                                                  child: Text(timeMap[
+                                                      'label'],
+                                                      style: TextStyle(
+                                                          fontSize: 17,
+                                                          fontWeight:
+                                                              FontWeight.w500)),
+                                                ))
+                                            .toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            selectedTimeOption = value;
+                                            attendanceData = [];
+                                          });
+                                          fetchAttendanceData();
+                                        },
+                                      ),
+                                    ),
                                   ),
-                                  padding: EdgeInsets.symmetric(horizontal: 12),
-                                  child: DropdownButton<String>(
-                                    isExpanded: true,
-                                    dropdownColor: Colors.white, 
-                                    value: dateTimes[selectedDate]
-                                                ?.contains(selectedTime) ==
-                                            true
-                                        ? selectedTime
-                                        : null,
-                                    hint: Text('เลือกเวลา'),
-                                    items: dateTimes[selectedDate]!
-                                        .map((time) => DropdownMenuItem(
-                                              value: time,
-                                              child: Text(time),
-                                            ))
-                                        .toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        selectedTime = value;
-                                        fetchAttendanceData();
-                                      });
-                                    },
-                                  ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
@@ -347,7 +400,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ],
                       ),
                     ),
-                  
+
                   SizedBox(height: 20),
 
                   if (attendanceData.isNotEmpty)
@@ -384,13 +437,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   children: attendanceData.map((record) {
                                     final id = record['id']!;
                                     final name = record['name']!;
-                                    final status = record['status'] ?? 'ไม่ทราบ';
-                                
+                                    final status =
+                                        record['status'] ?? 'ไม่ทราบ';
+
                                     return Container(
-                                      padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: 6, horizontal: 8),
                                       decoration: BoxDecoration(
                                         border: Border(
-                                          top: BorderSide(color: Colors.grey.shade300),
+                                          top: BorderSide(
+                                              color: Colors.grey.shade300),
                                         ),
                                       ),
                                       child: Row(
@@ -402,19 +458,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                             child: SizedBox(
                                               height: 30,
                                               child: ElevatedButton(
-                                                onPressed: (){}, 
+                                                onPressed: () {},
                                                 style: ElevatedButton.styleFrom(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  backgroundColor: statusColors[status] ?? Colors.grey.shade300,
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                                  backgroundColor:
+                                                      statusColors[status] ??
+                                                          Colors.grey.shade300,
                                                   foregroundColor: Colors.white,
                                                   elevation: 0,
                                                   shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(10),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
                                                   ),
                                                 ),
                                                 child: Text(
                                                   status,
-                                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                                  style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w600),
                                                 ),
                                               ),
                                             ),

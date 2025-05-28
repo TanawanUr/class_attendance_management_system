@@ -1,13 +1,18 @@
+import 'package:class_attendance_management_system/services/attendance_service.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SubjectDetailScreen extends StatefulWidget {
+  final String classId;
   final String subjectName;
   final String date;
   final String time;
 
   const SubjectDetailScreen({
     Key? key,
+    required this.classId,
     required this.subjectName,
     required this.date,
     required this.time,
@@ -18,8 +23,35 @@ class SubjectDetailScreen extends StatefulWidget {
 }
 
 class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
-  String selectedStatus = 'เลือก';
   Map<String, String> selectedStatuses = {};
+
+  String formatThaiDate(String isoDate) {
+    final date = DateTime.parse(isoDate);
+    final thaiDays = [
+      'อาทิตย์',
+      'จันทร์',
+      'อังคาร',
+      'พุธ',
+      'พฤหัสบดี',
+      'ศุกร์',
+      'เสาร์'
+    ];
+    final buddhistYear = date.year + 543;
+    final dayName = thaiDays[date.weekday % 7];
+    final dateFormatted = DateFormat('dd/MM').format(date);
+
+    return '$dayName  $dateFormatted/$buddhistYear';
+  }
+
+  String formatShortTimeRange(String timeRange) {
+    final parts = timeRange.split(' - ');
+    if (parts.length != 2) return timeRange;
+
+    final start = parts[0].substring(0, 5);
+    final end = parts[1].substring(0, 5);
+
+    return '$start - $end น.';
+  }
 
   final List<String> statusOptions = [
     'มาเรียน',
@@ -37,48 +69,132 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
     'ลาป่วย': Color(0xffAE62E2),
   };
 
-  final List<Map<String, String>> students = [
-    {
-      'id': '164404140076',
-      'name': 'นายธนบดี สุธามา',
-    },
-    {
-      'id': '164404140077',
-      'name': 'นางสาวสมฤดี ใจดี',
-    },
-    {
-      'id': '164404140078',
-      'name': 'นายอาทิตย์ สว่างจิต',
-    },
-    {
-      'id': '164404140079',
-      'name': 'นางสาวอรอุมา สว่างจิต',
-    },
-    {
-      'id': '164404140080',
-      'name': 'นายพงศกร สุขใจ',
-    },
-    {
-      'id': '164404140081',
-      'name': 'นางสาวสุภาภรณ์ สุขใจ',
-    },
-    {
-      'id': '164404140082',
-      'name': 'นายอาทิตย์ สุขใจ',
-    },
-    {
-      'id': '164404140083',
-      'name': 'นางสาวอรอุมา สุขใจ',
-    },
-    {
-      'id': '164404140084',
-      'name': 'นายพงศกร สุขใจ',
-    },
-    {
-      'id': '164404140085',
-      'name': 'นางสาวสุภาภรณ์ สุขใจ',
-    },
-  ];
+  String mapStatusToDb(String status) {
+    switch (status) {
+      case 'มาเรียน':
+        return 'present';
+      case 'สาย':
+        return 'late';
+      case 'ขาด':
+        return 'absent';
+      case 'ลากิจ':
+        return 'personal_leave';
+      case 'ลาป่วย':
+        return 'sick_leave';
+      default:
+        return 'absent';
+    }
+  }
+
+  List<Map<String, String>> students = [];
+  String? attendanceId;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchStudents();
+  }
+
+  Future<void> fetchStudents() async {
+    final timeParts = widget.time.split(' - ');
+    final startTime = timeParts[0];
+    final endTime = timeParts[1];
+
+    try {
+      final fetchedStudents = await AttendanceService.fetchStudents(
+        classId: widget.classId,
+        date: widget.date,
+        startTime: startTime,
+        endTime: endTime,
+      );
+
+      setState(() {
+        students.clear();
+        students.addAll(fetchedStudents);
+
+        selectedStatuses.clear();
+        for (var student in fetchedStudents) {
+          final studentId = student['id'] ?? '';
+          final rawStatus = student['status'] ?? 'เลือก';
+          String displayStatus;
+
+          switch (rawStatus) {
+            case 'present':
+              displayStatus = 'มาเรียน';
+              break;
+            case 'late':
+              displayStatus = 'สาย';
+              break;
+            case 'absent':
+              displayStatus = 'ขาด';
+              break;
+            case 'personal_leave':
+              displayStatus = 'ลากิจ';
+              break;
+            case 'sick_leave':
+              displayStatus = 'ลาป่วย';
+              break;
+            default:
+              displayStatus = 'เลือก';
+          }
+
+          selectedStatuses[studentId] = displayStatus;
+        }
+      });
+    } catch (e) {
+      print('Error fetching students: $e');
+    }
+  }
+
+  Future<void> submitSingleAttendance(String studentId, String status) async {
+    final timeParts = widget.time.split(' - ');
+    final startTime = timeParts[0];
+    final endTime = timeParts[1];
+
+    final prefs = await SharedPreferences.getInstance();
+    final createdBy = prefs.getString('user_id') ?? '';
+
+    if (createdBy.isEmpty) {
+      print('ไม่พบ user_id');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ไม่พบข้อมูลผู้ใช้'),
+          duration: Duration(seconds: 1),),
+      );
+      return;
+    }
+
+    try {
+      await AttendanceService.submitAttendance(
+        classId: widget.classId,
+        date: widget.date,
+        startTime: startTime,
+        endTime: endTime,
+        createdBy: createdBy,
+        records: [
+          {
+            'student_id': studentId,
+            'status': mapStatusToDb(status),
+          }
+        ],
+      );
+
+      print('บันทึกสำเร็จ: $studentId -> $status');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('บันทึกสำเร็จ'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      print('เกิดข้อผิดพลาด: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('บันทึกไม่สำเร็จ'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -176,9 +292,9 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: AutoSizeText(
-                          widget.date,
+                          formatThaiDate(widget.date),
                           style: TextStyle(fontSize: 18),
                           maxLines: 1,
                           minFontSize: 12,
@@ -186,7 +302,11 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 8),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
                     Text(
                       'เวลา : ',
                       style: TextStyle(
@@ -201,9 +321,9 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: AutoSizeText(
-                          widget.time,
+                          formatShortTimeRange(widget.time),
                           style: TextStyle(fontSize: 18),
                           maxLines: 1,
                           minFontSize: 12,
@@ -357,6 +477,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                         selectedStatuses[studentId] = status;
                       });
                       Navigator.of(context).pop();
+                      submitSingleAttendance(studentId, status);
                     },
                     child: Text(status, style: TextStyle(fontSize: 20)),
                   ),
