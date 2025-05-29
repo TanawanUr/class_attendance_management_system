@@ -20,8 +20,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASS}
       MYSQL_DATABASE: ${DB_NAME}
+      TZ: Asia/Bangkok
     volumes:
       - mysql-data:/var/lib/mysql
+    command: --default-time-zone='+07:00'
   
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
