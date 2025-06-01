@@ -66,6 +66,8 @@ class AttendanceService {
       'created_by': createdBy,
       'records': records,
     };
+    
+    print('date: $date');
 
     final response = await http.post(
       url,
@@ -128,4 +130,37 @@ class AttendanceService {
     }
   }
 
+  static Future<void> checkAndMarkAbsent() async {
+    try {
+      final url = Uri.parse('$baseUrl/attendance/check-absent');
+      
+      final response = await http.post(url);
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to check absent: ${response.body}');
+      }
+    } catch (e) {
+      print('Error checking absent: $e');
+      throw e;
+    }
+  }
+
+  static Future<void> startAutoAttendanceCheck(String classId, String date, String startTime, String endTime) async {
+    try {
+      while (true) {
+        await Future.delayed(Duration(minutes: 1));
+
+        await checkAndMarkAbsent();
+
+        final now = DateTime.now();
+        final classEndTime = DateTime.parse('${date}T$endTime');
+        if (now.isAfter(classEndTime)) {
+          break;
+        }
+      }
+    } catch (e) {
+      print('Error in auto attendance check: $e');
+      throw e;
+    }
+  }
 }
