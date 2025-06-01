@@ -24,20 +24,23 @@ class SubjectDetailScreen extends StatefulWidget {
 
 class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
   Map<String, String> selectedStatuses = {};
+  List<Map<String, String>> students = [];
+  bool isAutoCheckingActive = false;
 
   String formatThaiDate(String isoDate) {
     final date = DateTime.parse(isoDate);
     final thaiDays = [
-      'อาทิตย์',
       'จันทร์',
       'อังคาร',
       'พุธ',
       'พฤหัสบดี',
       'ศุกร์',
-      'เสาร์'
+      'เสาร์',
+      'อาทิตย์'
     ];
     final buddhistYear = date.year + 543;
-    final dayName = thaiDays[date.weekday % 7];
+    final dayIndex = date.weekday % 7;
+    final dayName = thaiDays[dayIndex];
     final dateFormatted = DateFormat('dd/MM').format(date);
 
     return '$dayName  $dateFormatted/$buddhistYear';
@@ -86,13 +89,42 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
     }
   }
 
-  List<Map<String, String>> students = [];
   String? attendanceId;
 
   @override
   void initState() {
     super.initState();
     fetchStudents();
+    _startAutoCheck();
+  }
+
+  @override
+  void dispose() {
+    isAutoCheckingActive = false;
+    super.dispose();
+  }
+
+  Future<void> _startAutoCheck() async {
+    if (isAutoCheckingActive) return;
+    
+    isAutoCheckingActive = true;
+    final timeParts = widget.time.split(' - ');
+    final startTime = timeParts[0];
+    final endTime = timeParts[1];
+
+    try {
+      await AttendanceService.startAutoAttendanceCheck(
+        widget.classId,
+        widget.date,
+        startTime,
+        endTime,
+      );
+    } catch (e) {
+      print('Error starting auto check: $e');
+      // แสดง error message ถ้าต้องการ
+    } finally {
+      isAutoCheckingActive = false;
+    }
   }
 
   Future<void> fetchStudents() async {

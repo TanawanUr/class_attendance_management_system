@@ -27,7 +27,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   List<String> subjects = [];
   Map<String, List<String>> subjectDates = {};
-  Map<String, List<Map<String, dynamic>>> dateTimes = {}; // <-- สำคัญ
+  Map<String, List<Map<String, dynamic>>> dateTimes = {};
+  Map<String, String> subjectToClassId = {};
 
   String? get selectedStartTime => selectedTimeOption?['start_time'];
   String? get selectedEndTime => selectedTimeOption?['end_time'];
@@ -96,7 +97,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final result = await AttendanceService.fetchHistoryOptions(token);
 
     setState(() {
-      subjects = List<String>.from(result['subjects']);
+      // Extract subject names and build class ID mapping from the new structure
+      subjects = [];
+      subjectToClassId.clear();
+      
+      final List<dynamic> subjectsData = result['subjects'];
+      for (var subjectData in subjectsData) {
+        final name = subjectData['name'];
+        final classId = subjectData['class_id'];
+        subjects.add(name);
+        subjectToClassId[name] = classId;
+      }
 
       final Map<String, dynamic> sd = result['subjectDates'];
       subjectDates =
@@ -112,7 +123,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     (item) => Map<String, dynamic>.from(item))
                 .toList());
       });
+
+      print('Subjects loaded:');
+      subjects.forEach((subject) {
+        print('$subject -> ${subjectToClassId[subject]}');
+      });
     });
+  }
+
+  List<Map<String, dynamic>> getTimeOptionsForDate(String date) {
+    if (selectedSubject == null) {
+      return [];
+    }
+    
+    final classId = subjectToClassId[selectedSubject];
+    if (classId == null) {
+      return [];
+    }
+
+    final timesForDate = dateTimes[date] ?? [];
+    
+    // Filter times to only show slots for the selected class
+    final filteredTimes = timesForDate.where((time) {
+      return time['class_id'] == classId;
+    }).toList();
+    
+    return filteredTimes;
   }
 
   Map<String, int> getSummary(List<Map<String, dynamic>> data) {
@@ -327,19 +363,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         isExpanded: true,
                                         dropdownColor: Colors.white,
                                         value: selectedTimeOption != null &&
-                                                dateTimes[selectedDate]!
-                                                    .contains(
-                                                        selectedTimeOption)
+                                                getTimeOptionsForDate(selectedDate!)
+                                                    .contains(selectedTimeOption)
                                             ? selectedTimeOption
                                             : null,
                                         hint: Text('เลือกเวลา',
                                             style: TextStyle(fontSize: 17)),
-                                        items: dateTimes[selectedDate]!
+                                        items: getTimeOptionsForDate(selectedDate!)
                                             .map((timeMap) => DropdownMenuItem<
                                                     Map<String, dynamic>>(
                                                   value: timeMap,
-                                                  child: Text(timeMap[
-                                                      'label'],
+                                                  child: Text(timeMap['label'],
                                                       style: TextStyle(
                                                           fontSize: 17,
                                                           fontWeight:
