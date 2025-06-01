@@ -32,17 +32,21 @@ class HomeworkService {
       final data = json.decode(response.body);
       final List homeworkList = data['homeworkList'];
 
+
+
       return homeworkList.map<Map<String, dynamic>>((item) {
-        String dueDateStr = item['due_date'].toString().substring(0, 10);
-        String assignDateStr = item['assign_date'].toString().substring(0, 10);
+        // แปลงวันที่โดยใช้ DateTime และ timezone ที่ถูกต้อง
+        DateTime dueDate = DateTime.parse(item['due_date']).toLocal();
+        DateTime assignDate = DateTime.parse(item['assign_date']).toLocal();
 
         return {
           'homeworkId': item['homework_id'],
           'assignmentTitle': item['title'],
-          'assignDate': assignDateStr,
-          'dueDate': dueDateStr,
+          'assignDate': assignDate.toIso8601String().split('T')[0],
+          'dueDate': dueDate.toIso8601String().split('T')[0],
         };
       }).toList();
+
     } else {
       throw Exception('Failed to load homework');
     }
@@ -128,4 +132,63 @@ class HomeworkService {
     }
   }
 
+  static Future<Map<String, dynamic>> checkMissingHomework() async {
+    try {
+      final url = Uri.parse('$baseUrl/homework/check-missing');
+      final response = await http.post(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {
+          'message': data['message'],
+          'updatedCount': data['updatedCount'],
+          'checkedHomework': data['checkedHomework'],
+          'currentDate': data['currentDate']
+        };
+      } else {
+        throw Exception('Failed to check missing homework: ${response.body}');
+      }
+    } catch (e) {
+      print('Error checking missing homework: $e');
+      throw e;
+    }
+  }
+
+  static Future<void> startAutoHomeworkCheck() async {
+    try {
+      print('\n=== Starting Auto Homework Check ===');
+      print('Current time: ${DateTime.now().toLocal()}');
+      
+      // First check immediately for past homework
+      await checkMissingHomework();
+      
+      // Then start periodic checks
+      while (true) {
+        await Future.delayed(Duration(minutes: 1));
+        print('\n=== Auto Check at: ${DateTime.now().toLocal()} ===');
+        final result = await checkMissingHomework();
+        print('Check result: $result');
+      }
+    } catch (e) {
+      print('Error in auto homework check: $e');
+      throw e;
+    }
+  }
+
+  static Future<Map<String, dynamic>> getServerTime() async {
+    try {
+      final url = Uri.parse('$baseUrl/homework/server-time');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data;
+      } else {
+        throw Exception('Failed to get server time: ${response.body}');
+      }
+    } catch (e) {
+      print('Error getting server time: $e');
+      throw e;
+    }
+  }
 }

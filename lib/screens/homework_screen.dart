@@ -16,6 +16,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
   void initState() {
     super.initState();
     _fetchSubjects();
+    _startAutoCheck();
   }
 
   Future<void> _fetchSubjects() async {
@@ -36,6 +37,18 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _startAutoCheck() async {
+    try {
+      // Check server time first
+      final serverTime = await HomeworkService.getServerTime();
+
+      // Start auto check
+      await HomeworkService.startAutoHomeworkCheck();
+    } catch (e) {
+      print('Error starting auto homework check: $e');
     }
   }
 

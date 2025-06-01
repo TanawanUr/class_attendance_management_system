@@ -280,18 +280,20 @@ void showCreateDialog({
   showDialog(
     context: context,
     builder: (context) {
-      return StatefulBuilder(builder: (context, setState) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                    Stack(
                   alignment: Alignment.center,
                   children: [
                     Center(
@@ -308,121 +310,137 @@ void showCreateDialog({
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                Text('หัวข้อ',
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(
-                    hintText: 'กรอกหัวข้อการบ้าน',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text('กำหนดส่ง - หมดเขต',
-                    style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      setState(() => selectedDate = picked);
-                    }
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            selectedDate != null
-                                ? '${selectedDate!.toLocal()}'.split(' ')[0]
-                                : 'เลือกวันที่',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                        Icon(Icons.calendar_today, size: 20),
-                      ],
+                  const SizedBox(height: 20),
+                  Text('หัวข้อการบ้าน',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      hintText: 'กรอกหัวข้อการบ้าน',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     ),
                   ),
-                ),
-                const SizedBox(height: 25),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final title = titleController.text.trim();
-                      final dueDate =
-                          selectedDate?.toIso8601String().split('T')[0];
-
-                      if (title.isEmpty || dueDate == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('กรุณากรอกข้อมูลให้ครบ'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final success = await HomeworkService().createHomework(
-                        classId: classId,
-                        title: title,
-                        dueDate: dueDate,
+                  const SizedBox(height: 20),
+                  Text('กำหนดส่ง - หมดเขต',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
                       );
-
-                      if (success) {
-                        Navigator.of(context).pop(); // ปิด dialog ก่อน
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('สร้างการบ้านสำเร็จ'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-
-                        onCreated();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('สร้างการบ้านไม่สำเร็จ'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
+                      if (picked != null) {
+                        setState(() => selectedDate = picked);
                       }
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xffF4C610),
-                      padding: EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              selectedDate != null
+                                  ? '${selectedDate!.toLocal()}'.split(' ')[0]
+                                  : 'เลือกวันที่',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          Icon(Icons.calendar_today, size: 20),
+                        ],
+                      ),
                     ),
-                    child: Text('สร้าง',
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 25),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final title = titleController.text.trim();
+                        
+                        // แก้ไขการจัดการวันที่
+                        String? dueDate;
+                        if (selectedDate != null) {
+                          // ปรับเวลาให้เป็น 23:59:59 ของวันที่เลือก
+                          final adjustedDate = DateTime(
+                            selectedDate!.year,
+                            selectedDate!.month,
+                            selectedDate!.day,
+                            23,
+                            59,
+                            59,
+                          );
+                          dueDate = adjustedDate.toIso8601String().split('T')[0];
+                        }
+
+                        if (title.isEmpty || dueDate == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('กรุณากรอกข้อมูลให้ครบ'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final success = await HomeworkService().createHomework(
+                          classId: classId,
+                          title: title,
+                          dueDate: dueDate,
+                        );
+
+                        if (success) {
+                          Navigator.of(context).pop();
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('สร้างการบ้านสำเร็จ'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+
+                          onCreated();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('สร้างการบ้านไม่สำเร็จ'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xffF9CA10),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: Text('สร้าง',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w500)),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      });
+          );
+        },
+      );
     },
   );
 }
