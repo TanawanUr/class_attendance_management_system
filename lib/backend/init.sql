@@ -22,10 +22,10 @@ CREATE TABLE students (
 );
 
 CREATE TABLE parents (
-    student_id VARCHAR(50) PRIMARY KEY,
-    full_name TEXT,
-    line_id TEXT NOT NULL,
-    FOREIGN KEY (student_id) REFERENCES students(student_id)
+  student_id VARCHAR(50),
+  line_id VARCHAR(100),
+  PRIMARY KEY (student_id, line_id),
+  FOREIGN KEY (student_id) REFERENCES students(student_id)
 );
 
 CREATE TABLE parent_notifications (
